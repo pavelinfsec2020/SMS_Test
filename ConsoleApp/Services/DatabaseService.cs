@@ -1,8 +1,8 @@
 ﻿using ConsoleApp.Data;
+using ConsoleApp.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
-using ClientMenuItem = HttpClientLib.Models.MenuItem;
 
 namespace ConsoleApp.Services
 {
@@ -26,7 +26,7 @@ namespace ConsoleApp.Services
             _logger.Information("Database initialized");
         }
 
-        public async Task SaveMenuItemsAsync(ClientMenuItem[] items)
+        public async Task SaveMenuItemsAsync(MenuItem[] items)
         {
             using var scope = _serviceProvider.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -65,13 +65,13 @@ namespace ConsoleApp.Services
             _logger.Information($"Saved {items.Length} items to database");
         }
 
-        public async Task<Dictionary<string, ClientMenuItem>> GetMenuItemsDictAsync()
+        public async Task<Dictionary<string, MenuItem>> GetMenuItemsDictAsync()
         {
             using var scope = _serviceProvider.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
             var items = await context.MenuItems
-                .Select(m => new ClientMenuItem
+                .Select(m => new MenuItem
                 {
                     Id = m.Id,
                     Article = m.Article,

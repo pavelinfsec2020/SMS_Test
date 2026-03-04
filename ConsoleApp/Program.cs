@@ -1,172 +1,50 @@
-﻿using ConsoleApp.Data;
-using ConsoleApp.Services;
-using GrpcClientLib.Services;
-using HttpClientLib.Services;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
-using ClientMenuItem = HttpClientLib.Models.MenuItem;
-using ClientOrder = HttpClientLib.Models.Order;
-using ClientOrderItem = HttpClientLib.Models.OrderItem;
+using HttpClientLib.Services;
+using ConsoleApp.Configuration;
+using ConsoleApp.Data;
+using ConsoleApp.Mappers;
+using ConsoleApp.Services;
+using ConsoleApp.Models;
+using ConsoleApp;
+using GrpcClientLib.Services;
+
 
 namespace SmsTest.ConsoleApp;
 
 class Program
 {
-    public static async Task Main(string[] args)
+    static async Task Main(string[] args)
     {
-        var logFileName = $"test-sms-console-app-{DateTime.Now:yyyyMMdd}.log";
-        
-        Log.Logger = new LoggerConfiguration()
-            .WriteTo.Console()
-            .WriteTo.File(logFileName)
-            .CreateLogger();
+        SetupLogging();
 
         try
         {
             Log.Information("Application started");
 
-            var config = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: false)
-                .Build();
+            var settings = LoadConfiguration();
+            var serviceProvider = ConfigureServices(settings);
 
-            var services = new ServiceCollection();
-            services.AddDbContext<AppDbContext>(options =>
-                options.UseNpgsql(config.GetConnectionString("DefaultConnection")));
+            await InitializeDatabaseAsync(serviceProvider);
 
-            var serviceProvider = services.BuildServiceProvider();
-            var dbService = new DatabaseService(serviceProvider, Log.Logger);
+            var menuItems = await GetMenuFromServerAsync(settings);
 
-            await dbService.InitializeDatabaseAsync();
+            await SaveMenuToDatabaseAsync(serviceProvider, menuItems);
 
-            ClientMenuItem[] menuItems;
-            var apiType = config["ApiType"];
+            DisplayMenu(menuItems);
 
-            if (apiType == "Grpc")
-            {
-                var grpcEndpoint = config["GrpcSettings:Endpoint"];
-                var grpcClient = new GrpcClientService(grpcEndpoint);
-                var grpcItems = await grpcClient.GetMenuAsync(true);
+            var order = await CreateOrderFromUserInputAsync(serviceProvider);
 
-                menuItems = grpcItems.Select(m => new ClientMenuItem
-                {
-                    Id = m.Id,
-                    Article = m.Article,
-                    Name = m.Name,
-                    Price = (decimal)m.Price,
-                    IsWeighted = m.IsWeighted,
-                    FullPath = m.FullPath,
-                    Barcodes = m.Barcodes.ToList()
-                }).ToArray();
-            }
-            else
-            {
-                var httpEndpoint = config["HttpSettings:Endpoint"];
-                var username = config["HttpSettings:Username"];
-                var password = config["HttpSettings:Password"];
+            await SendOrderToServerAsync(settings, order);
 
-                var httpClient = new HttpClientService(httpEndpoint, username, password);
-                menuItems = await httpClient.GetMenuAsync();
-            }
-
-            await dbService.SaveMenuItemsAsync(menuItems);
-
-            foreach (var item in menuItems)
-            {
-                Log.Information("{Name} – {Article} – {Price} rub",
-                    item.Name, item.Article, item.Price);
-            }
-
-            var order = new ClientOrder
-            {
-                OrderId = Guid.NewGuid().ToString()
-            };
-
-            var menuDict = await dbService.GetMenuItemsDictAsync();
-            var inputValid = false;
-           
-            while (!inputValid)
-            {
-                Log.Information("Enter order items (Code:Quantity;Code2:Quantity2;...):");
-                var input = Console.ReadLine();
-
-                if (string.IsNullOrWhiteSpace(input))
-                {
-                    Log.Warning("Input cannot be empty");
-                    continue;
-                }
-
-                try
-                {
-                    var items = ParseOrderItems(input);
-                    inputValid = ValidateOrderItems(items, menuDict);
-
-                    if (inputValid)
-                    {
-                        foreach (var item in items)
-                        {
-                            var menuItem = menuDict[item.Key];
-                            order.MenuItems.Add(new ClientOrderItem
-                            {
-                                Id = menuItem.Id,
-                                Quantity = item.Value.ToString("F3")
-                            });
-                        }
-                        Log.Information("Order created successfully");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Log.Warning("Error parsing input: {Message}", ex.Message);
-                }
-            }
-
-            try
-            {
-                if (apiType == "Grpc")
-                {
-                    var grpcEndpoint = config["GrpcSettings:Endpoint"];
-                    var grpcClient = new GrpcClientService(grpcEndpoint);
-
-                    var grpcOrder = new SmsTest.GrpcClient.Order
-                    {
-                        Id = order.OrderId
-                    };
-
-                    foreach (var item in order.MenuItems)
-                    {
-                        grpcOrder.OrderItems.Add(new SmsTest.GrpcClient.OrderItem
-                        {
-                            Id = item.Id,
-                            Quantity = double.Parse(item.Quantity)
-                        });
-                    }
-
-                    await grpcClient.SendOrderAsync(grpcOrder);
-                }
-                else
-                {
-                    var httpEndpoint = config["HttpSettings:Endpoint"];
-                    var username = config["HttpSettings:Username"];
-                    var password = config["HttpSettings:Password"];
-
-                    var httpClient = new HttpClientService(httpEndpoint, username, password);
-                    await httpClient.SendOrderAsync(order);
-                }
-
-                Log.Information("SUCCESS");
-            }
-            catch (Exception ex)
-            {
-                Log.Error("Error sending order: {Message}", ex.Message);
-            }
+            Log.Information(Constants.Messages.Success);
         }
         catch (Exception ex)
         {
             Log.Fatal(ex, "Application error");
-            Log.Information("Program terminated: {Message}", ex.Message);
+            Log.Information(Constants.Messages.ProgramTerminated, ex.Message);
         }
         finally
         {
@@ -174,42 +52,122 @@ class Program
         }
     }
 
-    private static Dictionary<string, decimal> ParseOrderItems(string input)
+    private static void SetupLogging()
     {
-        var result = new Dictionary<string, decimal>();
-        var pairs = input.Split(';', StringSplitOptions.RemoveEmptyEntries);
-
-        foreach (var pair in pairs)
-        {
-            var parts = pair.Split(':');
-           
-            if (parts.Length != 2)
-                throw new FormatException($"Invalid format: {pair}");
-
-            var code = parts[0].Trim();
-            
-            if (!decimal.TryParse(parts[1].Trim(), out var quantity))
-                throw new FormatException($"Invalid quantity: {parts[1]}");
-
-            if (quantity <= 0)
-                throw new ArgumentException($"Quantity must be positive: {quantity}");
-
-            result[code] = quantity;
-        }
-
-        return result;
+        var logFileName = $"{Constants.LogFilePrefix}{DateTime.Now:yyyyMMdd}.log";
+        Log.Logger = new LoggerConfiguration()
+            .WriteTo.Console()
+            .WriteTo.File(logFileName)
+            .CreateLogger();
     }
 
-    private static bool ValidateOrderItems(Dictionary<string, decimal> items, Dictionary<string, ClientMenuItem> menuDict)
+    private static AppSettings LoadConfiguration()
     {
-        foreach (var code in items.Keys)
+        var config = new ConfigurationBuilder()
+            .SetBasePath(AppContext.BaseDirectory)
+            .AddJsonFile(Constants.AppSettingsFile, optional: false)
+            .Build();
+
+        return new AppSettings
         {
-            if (!menuDict.ContainsKey(code))
+            ApiType = config["ApiType"] ?? "Http",
+            HttpSettings = new HttpSettings
             {
-                Log.Warning($"Code {code} not found in menu");
-                return false;
+                Endpoint = config["HttpSettings:Endpoint"] ?? "",
+                Username = config["HttpSettings:Username"] ?? "",
+                Password = config["HttpSettings:Password"] ?? ""
+            },
+            GrpcSettings = new GrpcSettings
+            {
+                Endpoint = config["GrpcSettings:Endpoint"] ?? ""
+            },
+            ConnectionStrings = new ConnectionStrings
+            {
+                DefaultConnection = config.GetConnectionString("DefaultConnection") ?? ""
             }
+        };
+    }
+
+    private static IServiceProvider ConfigureServices(AppSettings settings)
+    {
+        var services = new ServiceCollection();
+
+        services.AddSingleton(Log.Logger);
+        services.AddSingleton(settings);
+
+        services.AddDbContext<AppDbContext>(options =>
+            options.UseNpgsql(settings.ConnectionStrings.DefaultConnection));
+
+        services.AddSingleton<DatabaseService>();
+        services.AddSingleton<OrderParser>();
+        services.AddSingleton<OrderService>();
+
+        return services.BuildServiceProvider();
+    }
+
+    private static async Task InitializeDatabaseAsync(IServiceProvider services)
+    {
+        var dbService = services.GetRequiredService<DatabaseService>();
+        await dbService.InitializeDatabaseAsync();
+    }
+
+    private static async Task<MenuItem[]> GetMenuFromServerAsync(AppSettings settings)
+    {
+        if (settings.ApiType == Constants.ApiTypes.Grpc)
+        {
+            using var client = new GrpcClientService(settings.GrpcSettings.Endpoint);
+            var items = await client.GetMenuAsync(true);
+            return items.Select(MenuItemMapper.MapFromGrpc).ToArray();
         }
-        return true;
+        else
+        {
+            using var client = new HttpClientService(
+                settings.HttpSettings.Endpoint,
+                settings.HttpSettings.Username,
+                settings.HttpSettings.Password);
+            var items = await client.GetMenuAsync();
+            return items.Select(MenuItemMapper.MapFromClient).ToArray();
+        }
+    }
+
+    private static async Task SaveMenuToDatabaseAsync(IServiceProvider services, MenuItem[] menuItems)
+    {
+        var dbService = services.GetRequiredService<DatabaseService>();
+        await dbService.SaveMenuItemsAsync(menuItems);
+    }
+
+    private static void DisplayMenu(MenuItem[] menuItems)
+    {
+        Log.Information(Constants.Messages.MenuHeader);
+        foreach (var item in menuItems)
+        {
+            Log.Information(Constants.Messages.MenuFormat,
+                item.Name, item.Article, item.Price);
+        }
+    }
+
+    private static async Task<Order> CreateOrderFromUserInputAsync(IServiceProvider services)
+    {
+        var orderService = services.GetRequiredService<OrderService>();
+        return await orderService.CreateOrderFromInputAsync();
+    }
+
+    private static async Task SendOrderToServerAsync(AppSettings settings, Order order)
+    {
+        if (settings.ApiType == Constants.ApiTypes.Grpc)
+        {
+            using var client = new GrpcClientService(settings.GrpcSettings.Endpoint);
+            var grpcOrder = MenuItemMapper.MapToGrpc(order);
+            await client.SendOrderAsync(grpcOrder);
+        }
+        else
+        {
+            using var client = new HttpClientService(
+                settings.HttpSettings.Endpoint,
+                settings.HttpSettings.Username,
+                settings.HttpSettings.Password);
+            var clientOrder = MenuItemMapper.MapToClient(order);
+            await client.SendOrderAsync(clientOrder);
+        }
     }
 }
