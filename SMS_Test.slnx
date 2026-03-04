@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/Task1/">
+    <Project Path="ConsoleApp/ConsoleApp.csproj" Id="23c8fe09-baeb-4581-afb5-a8904daf326e" />
     <Project Path="GrpcClientLib/GrpcClientLib.csproj" />
     <Project Path="HttpClient/HttpClientLib.csproj" />
   </Folder>
