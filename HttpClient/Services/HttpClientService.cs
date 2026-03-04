@@ -1,6 +1,5 @@
-﻿using HttpClientLib.Models;
-using System;
-using System.Collections.Generic;
+﻿using HttpClientLib.Interfaces;
+using HttpClientLib.Models;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
@@ -8,7 +7,7 @@ using System.Text.Json;
 
 namespace HttpClientLib.Services
 {
-    public class HttpClientService : IDisposable
+    public class HttpClientService : IMenuItemProvider, IOrderSender, IDisposable
     {
         private readonly HttpClient _httpClient;
         private readonly string _endpoint;

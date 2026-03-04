@@ -1,9 +1,11 @@
-﻿using Grpc.Net.Client;
-using Google.Protobuf.WellKnownTypes;
+﻿using Google.Protobuf.WellKnownTypes;
+using Grpc.Net.Client;
+using GrpcClientLib.Interfaces;
+using SmsTest.GrpcClient;
 
 namespace GrpcClientLib.Services
 {
-    public class GrpcClientService : IDisposable
+    public class GrpcClientService : IMenuItemProvider, IOrderSender, IDisposable
     {
         private readonly GrpcChannel _channel;
         private readonly SmsTestService.SmsTestServiceClient _client;
