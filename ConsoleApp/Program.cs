@@ -14,7 +14,7 @@ namespace SmsTest.ConsoleApp;
 
 class Program
 {
-    static async Task Main(string[] args)
+    public static async Task Main(string[] args)
     {
         var logFileName = $"test-sms-console-app-{DateTime.Now:yyyyMMdd}.log";
         
@@ -174,7 +174,7 @@ class Program
         }
     }
 
-    static Dictionary<string, decimal> ParseOrderItems(string input)
+    private static Dictionary<string, decimal> ParseOrderItems(string input)
     {
         var result = new Dictionary<string, decimal>();
         var pairs = input.Split(';', StringSplitOptions.RemoveEmptyEntries);
@@ -200,7 +200,7 @@ class Program
         return result;
     }
 
-    static bool ValidateOrderItems(Dictionary<string, decimal> items, Dictionary<string, ClientMenuItem> menuDict)
+    private static bool ValidateOrderItems(Dictionary<string, decimal> items, Dictionary<string, ClientMenuItem> menuDict)
     {
         foreach (var code in items.Keys)
         {
