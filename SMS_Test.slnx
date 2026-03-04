@@ -1,4 +1,6 @@
 <Solution>
-  <Folder Name="/Task1/" />
+  <Folder Name="/Task1/">
+    <Project Path="HttpClient/HttpClient.csproj" />
+  </Folder>
   <Folder Name="/Task2/" />
 </Solution>
