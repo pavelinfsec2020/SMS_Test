@@ -33,8 +33,9 @@ namespace SmsWpfApp.Services
 
         #endregion
 
-        #region private methods
-        private void LoadVariables()
+        #region public methods
+
+        public void LoadVariables()
         {
             Variables.Clear();
 
@@ -54,10 +55,6 @@ namespace SmsWpfApp.Services
                 _logger.Information("Загружена переменная: {VariableName} = {VariableValue}", name, value);
             }
         }
-
-        #endregion
-
-        #region public methods
 
         public void SaveVariable(string name, string value)
         {
