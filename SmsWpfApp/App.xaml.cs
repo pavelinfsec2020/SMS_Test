@@ -1,6 +1,7 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Serilog;
+using SmsWpfApp.Services;
 using System.Windows;
 
 namespace SmsWpfApp
@@ -38,6 +39,7 @@ namespace SmsWpfApp
             services.AddSingleton(Configuration);
             services.AddSingleton(Log.Logger);
             services.AddSingleton<MainWindow>();
+            services.AddSingleton<EnvironmentVariableService>();
 
             ServiceProvider = services.BuildServiceProvider();
 
