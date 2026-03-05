@@ -18,7 +18,8 @@ namespace SmsWpfApp
         private string _statusMessage = "Готов к работе";
 
         #endregion
-       
+
+        #region ctor
         public MainWindow(EnvironmentVariableService environmentService, ILogger logger)
         {
             InitializeComponent();
@@ -28,12 +29,13 @@ namespace SmsWpfApp
 
             DataContext = this;
 
-            // Добавляем конвертеры
             Resources.Add("BoolToStatusConverter", new BoolToStatusConverter());
             Resources.Add("BoolToColorConverter", new BoolToColorConverter());
 
             Loaded += MainWindow_Loaded;
         }
+
+        #endregion
 
         #region props
 
