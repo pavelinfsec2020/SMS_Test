@@ -1,4 +1,4 @@
-﻿namespace ConsoleApp.Configuration
+﻿namespace Task1.ConsoleApp.Configuration
 {
     public class AppSettings
     {
