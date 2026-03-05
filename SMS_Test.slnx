@@ -4,5 +4,7 @@
     <Project Path="GrpcClientLib/GrpcClientLib.csproj" />
     <Project Path="HttpClient/HttpClientLib.csproj" />
   </Folder>
-  <Folder Name="/Task2/" />
+  <Folder Name="/Task2/">
+    <Project Path="SmsWpfApp/SmsWpfApp.csproj" Id="b6f71412-9431-4b48-9529-f3e17d83dff9" />
+  </Folder>
 </Solution>
