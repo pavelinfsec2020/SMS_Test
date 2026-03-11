@@ -4,7 +4,6 @@ namespace GrpcClientLib.Interfaces
 {
     public interface IOrderSender
     {
-        Task SendOrderAsync(Order order);
-        void SendOrder(Order order);
+        Task SendOrderAsync(Order order);    
     }
 }

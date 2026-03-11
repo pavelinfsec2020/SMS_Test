@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using System.Windows.Data;
+using System.Windows.Media;
 
 namespace SmsWpfApp.Converters
 {
@@ -7,7 +8,11 @@ namespace SmsWpfApp.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            return (bool)value ? "#4CAF50" : "#f44336";
+            if (value is bool boolValue)
+            {
+                return boolValue ? new SolidColorBrush(Colors.Green) : new SolidColorBrush(Colors.Red);
+            }
+            return new SolidColorBrush(Colors.Gray);
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

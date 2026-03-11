@@ -62,11 +62,7 @@ namespace HttpClientLib.Services
 
             if (!orderResponse.Success)
                 throw new InvalidOperationException(orderResponse.ErrorMessage);
-        }
-
-        public MenuItem[] GetMenu() => GetMenuAsync().GetAwaiter().GetResult();
-
-        public void SendOrder(Order order) => SendOrderAsync(order).GetAwaiter().GetResult();
+        } 
 
         public void Dispose()
         {

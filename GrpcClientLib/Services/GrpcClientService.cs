@@ -33,13 +33,7 @@ namespace GrpcClientLib.Services
             if (!response.Success)
                 throw new InvalidOperationException(response.ErrorMessage);
         }
-
-        public MenuItem[] GetMenu(bool withPrice = true)
-            => GetMenuAsync(withPrice).GetAwaiter().GetResult();
-
-        public void SendOrder(Order order)
-            => SendOrderAsync(order).GetAwaiter().GetResult();
-
+  
         public void Dispose()
         {
             _channel?.Dispose();

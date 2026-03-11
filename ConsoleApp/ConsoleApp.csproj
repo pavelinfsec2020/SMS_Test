@@ -27,12 +27,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\GrpcClientLib\GrpcClientLib.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="HttpClientLib">
-      <HintPath>..\HttpClientLib\bin\Debug\net8.0\HttpClientLib.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="..\HttpClientLib\HttpClientLib.csproj" />
   </ItemGroup>
 
 </Project>

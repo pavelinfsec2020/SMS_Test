@@ -2,6 +2,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using SmsWpfApp.Services;
+using SmsWpfApp.ViewModels;
+using SmsWpfApp.Views;
 using System.IO;
 using System.Windows;
 
@@ -10,7 +12,6 @@ namespace SmsWpfApp
     public partial class App : Application
     {
         public static IServiceProvider? ServiceProvider { get; private set; }
-        public static IConfiguration? Configuration { get; private set; }
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -18,13 +19,14 @@ namespace SmsWpfApp
 
             try
             {
+                // Настройка конфигурации
                 var basePath = AppDomain.CurrentDomain.BaseDirectory;
-                Configuration = new ConfigurationBuilder()
+                var configuration = new ConfigurationBuilder()
                     .SetBasePath(basePath)
-                    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true) // optional: true для отладки
+                    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                     .Build();
 
-                // Logging
+                // Настройка логирования
                 var logFileName = $"test-sms-wpf-app-{DateTime.Now:yyyyMMdd}.log";
                 Log.Logger = new LoggerConfiguration()
                     .WriteTo.File(
@@ -34,24 +36,26 @@ namespace SmsWpfApp
                     )
                     .CreateLogger();
 
-                //  DI 
+                // Настройка DI контейнера
                 var services = new ServiceCollection();
-                services.AddSingleton<IConfiguration>(Configuration);
+                services.AddSingleton<IConfiguration>(configuration);
                 services.AddSingleton<ILogger>(Log.Logger);
                 services.AddSingleton<EnvironmentVariableService>();
-                services.AddSingleton<MainWindow>();
+                services.AddTransient<MainViewModel>();
+                services.AddTransient<MainWindow>();
 
                 ServiceProvider = services.BuildServiceProvider();
 
                 Log.Information("Приложение запущено");
 
-                var mainWindow = ServiceProvider.GetService<MainWindow>();
-                mainWindow?.Show();
+                // Запускаем главное окно с ViewModel
+                var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
+                mainWindow.DataContext = ServiceProvider.GetRequiredService<MainViewModel>();
+                mainWindow.Show();
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Ошибка при запуске: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
-                Log.Error(ex, "Ошибка при запуске приложения");
                 Shutdown();
             }
         }

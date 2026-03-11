@@ -2,7 +2,7 @@
   <Folder Name="/Task1/">
     <Project Path="ConsoleApp/ConsoleApp.csproj" Id="23c8fe09-baeb-4581-afb5-a8904daf326e" />
     <Project Path="GrpcClientLib/GrpcClientLib.csproj" />
-    <Project Path="HttpClient/HttpClientLib.csproj" />
+    <Project Path="HttpClientLib/HttpClientLib.csproj" />
     <Project Path="LibTests/LibTests.csproj" Id="52849b52-c7f0-430e-a773-b6d1fe9fe60f" />
   </Folder>
   <Folder Name="/Task2/">
